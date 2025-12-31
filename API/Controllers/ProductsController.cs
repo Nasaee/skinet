@@ -1,5 +1,6 @@
 using System;
 using Core.Entities;
+using Core.Interfaces;
 using Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -8,32 +9,18 @@ namespace API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ProductsController : ControllerBase
+public class ProductsController(IProductRepository repo) : ControllerBase
 {
-    private readonly StoreContext context;
-
-    public ProductsController(StoreContext context)
-    {
-        this.context = context;
-    }
-
-    /*
-    IEnumerable<T> คือ Interface สำหรับ “ของที่เอาไปวน (foreach) ได้”
-    เช่น:
-    - List ของ Product
-    - Array ของ Product
-    - ข้อมูลที่ดึงจาก DB ทีละแถว
-    */
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
+    public async Task<ActionResult<IReadOnlyList<Product>>> GetProducts()
     {
-        return await context.Products.ToListAsync();
+        return Ok(await repo.GetProductsAsync());
     }
 
     [HttpGet("{id:int}")] // api/products/1
     public async Task<ActionResult<Product>> GetProduct(int id)
     {
-        var product = await context.Products.FindAsync(id);
+        var product = await repo.GetProductByIdAsync(id);
 
         if (product is null)
             return NotFound();
@@ -44,11 +31,13 @@ public class ProductsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Product>> CreateProduct(Product product)
     {
-        context.Products.Add(product);
+        repo.AddProduct(product);
+        if (await repo.SaveChangesAsync())
+        {
+            return CreatedAtAction("GetProduct", new { id = product.Id }, product);
+        }
 
-        await context.SaveChangesAsync();
-
-        return product;
+        return BadRequest("Problem creating product");
     }
 
     [HttpPut("{id:int}")]
@@ -57,38 +46,36 @@ public class ProductsController : ControllerBase
         if (product.Id != id || !ProductExists(id))
             return BadRequest("Cannot update this product");
 
-        /*
-        1. context.Entry(product)
-        - บอก EF Core ว่า “ขอเข้าถึง metadata / tracking info ของ object ตัวนี้หน่อย”
-        - ปกติ EF จะ track entity ที่ได้มาจาก DB (Find, First, etc.) แต่กรณีนี้ product มาจาก request body → EF ยังไม่รู้จักมัน
+        repo.UpdateProduct(product);
 
-        2. .State = EntityState.Modified
-        - EF จะ update ทุก column แม้ว่าคุณจะแก้มาแค่ field เดียวก็ตาม
-        */
-        context.Entry(product).State = EntityState.Modified;
+        if (await repo.SaveChangesAsync())
+        {
+            return NoContent();
+        }
 
-        await context.SaveChangesAsync();
-
-        return NoContent();
+        return BadRequest("Problem updating the product");
     }
 
     [HttpDelete("{id:int}")]
     public async Task<ActionResult> DeleteProduct(int id)
     {
-        var product = await context.Products.FindAsync(id);
+        var product = await repo.GetProductByIdAsync(id);
 
         if (product is null)
             return NotFound();
 
-        context.Products.Remove(product);
+        repo.DeleteProduct(product);
 
-        await context.SaveChangesAsync();
+        if (await repo.SaveChangesAsync())
+        {
+            return NoContent();
+        }
 
-        return NoContent();
+        return BadRequest("Problem deleting the product");
     }
 
     private bool ProductExists(int id)
     {
-        return context.Products.Any(x => x.Id == id);
+        return repo.ProductExists(id);
     }
 }
