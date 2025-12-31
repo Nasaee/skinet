@@ -31,4 +31,63 @@ if (app.Environment.IsDevelopment())
 
 app.MapControllers();
 
+try
+{
+    // เพราะ StoreContext ถูก register เป็น Scoped ตอนนี้เราอยู่นอก HTTP Request → ไม่มี scope ให้อัตโนมัติ ตอนนี้เราอยู่นอก HTTP Request → ไม่มี scope ให้อัตโนมัติ (คิดซะว่า ขอจำลอง request ปลอมขึ้นมาหนึ่งรอบ เพื่อใช้ DbContext)
+
+    /*
+    using
+    ใช้เพื่อ รับประกันว่า resource จะถูก Dispose ทันทีที่ใช้เสร็จ โดยเฉพาะพวก DI Scope / DbContext / DB Connection
+
+    1️⃣ CreateScope() สร้างอะไร?
+    ใน scope นี้จะมีของพวก:
+    - StoreContext (DbContext)
+    - connection ไป DB
+    - scoped services ทั้งหมด
+    พูดง่าย ๆ นี่คือ “อาณาเขตชั่วคราว” ของ dependency ชุดหนึ่ง
+
+    2️⃣ แล้วทำไมต้อง Dispose?
+    พอ scope หมดอายุ:
+    - DbContext ต้องถูกปิด
+    - DB Connection ต้องคืน pool
+    - Memory ต้องถูก release
+    ถ้า ไม่ Dispose
+    - connection ค้าง
+    - memory leak
+    - production ช้าลงแบบหาสาเหตุไม่เจอ
+
+    3️⃣ using ทำอะไรให้เรา?
+    using var scope = app.Services.CreateScope();
+    เทียบเท่า:
+    var scope = app.Services.CreateScope();
+    try
+    {
+    // ใช้งาน scope
+    }
+    finally
+    {
+    scope.Dispose();
+    }
+
+    4️⃣ ทำไมต้องใช้ using ตรงนี้ เป็นพิเศษ?
+    - อยู่นอก HTTP request
+    - ไม่มี middleware มาจัดการ lifetime ให้
+    - เราต้องรับผิดชอบ lifecycle เอง
+
+    ถ้าอยู่ใน Controller: ไม่ต้องใช้ using เพราะ ASP.NET Core จัดการ scope ให้แล้ว
+    */
+    using var scope = app.Services.CreateScope();
+    // ดึง DbContext จาก DI
+    var services = scope.ServiceProvider;
+    var context = services.GetRequiredService<StoreContext>();
+    // create db if not exist yet (Auto DB Upgrade) เทียบเท่า dotnet ef database update
+    await context.Database.MigrateAsync();
+    await StoreContextSeed.SeedAsync(context);
+}
+catch (Exception ex)
+{
+    Console.WriteLine(ex);
+    throw;
+}
+
 app.Run();
