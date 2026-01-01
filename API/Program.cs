@@ -31,11 +31,9 @@ if (app.Environment.IsDevelopment())
 
 app.MapControllers();
 
-try
-{
-    // เพราะ StoreContext ถูก register เป็น Scoped ตอนนี้เราอยู่นอก HTTP Request → ไม่มี scope ให้อัตโนมัติ ตอนนี้เราอยู่นอก HTTP Request → ไม่มี scope ให้อัตโนมัติ (คิดซะว่า ขอจำลอง request ปลอมขึ้นมาหนึ่งรอบ เพื่อใช้ DbContext)
+/*
+    เพราะ StoreContext ถูก register เป็น Scoped ตอนนี้เราอยู่นอก HTTP Request → ไม่มี scope ให้อัตโนมัติ ตอนนี้เราอยู่นอก HTTP Request → ไม่มี scope ให้อัตโนมัติ (คิดซะว่า ขอจำลอง request ปลอมขึ้นมาหนึ่งรอบ เพื่อใช้ DbContext)
 
-    /*
     using
     ใช้เพื่อ รับประกันว่า resource จะถูก Dispose ทันทีที่ใช้เสร็จ โดยเฉพาะพวก DI Scope / DbContext / DB Connection
 
@@ -76,6 +74,9 @@ try
 
     ถ้าอยู่ใน Controller: ไม่ต้องใช้ using เพราะ ASP.NET Core จัดการ scope ให้แล้ว
     */
+
+try
+{
     using var scope = app.Services.CreateScope();
     // ดึง DbContext จาก DI
     var services = scope.ServiceProvider;
