@@ -16,6 +16,9 @@ builder.Services.AddDbContext<StoreContext>(opt =>
 // AddScoped is scope for live time http requet (for each request) until request is finished
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 
+// this is how to inject Generic
+builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
