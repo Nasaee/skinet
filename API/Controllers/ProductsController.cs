@@ -16,7 +16,7 @@ public class ProductsController(IGenericRepository<Product> repo) : ControllerBa
         string? sort
     )
     {
-        var spec = new ProductSpecification(brand, type);
+        var spec = new ProductSpecification(brand, type, sort);
         var products = await repo.ListAsync(spec);
         return Ok(products);
     }

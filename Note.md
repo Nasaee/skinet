@@ -69,3 +69,9 @@ update database:
 ```bash
 dotnet ef database update -s API -p Infrastructure
 ```
+
+Create gitignore file:
+
+```bash
+dotnet gitignore file
+```

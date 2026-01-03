@@ -19,4 +19,6 @@ Criteria คือ เงื่อนไขหลัก (WHERE clause)
 public interface ISpecification<T>
 {
     Expression<Func<T, bool>>? Criteria { get; }
+    Expression<Func<T, object>>? OrderBy { get; }
+    Expression<Func<T, object>>? OrderByDescending { get; }
 }
