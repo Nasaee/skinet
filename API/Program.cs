@@ -1,3 +1,4 @@
+using API.Middleware;
 using Core.Interfaces;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +20,8 @@ builder.Services.AddScoped<IProductRepository, ProductRepository>();
 // this is how to inject Generic
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 
+builder.Services.AddCors();
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
@@ -31,6 +34,13 @@ if (app.Environment.IsDevelopment())
     // Api Docs: baseUrl/scalar/v1
     app.MapScalarApiReference();
 }
+app.UseMiddleware<ExceptionMiddleware>();
+
+app.UseCors(x =>
+    x.AllowAnyHeader()
+        .AllowAnyMethod()
+        .WithOrigins("http://localhost:4200", "https://localhost:4200")
+);
 
 app.MapControllers();
 
